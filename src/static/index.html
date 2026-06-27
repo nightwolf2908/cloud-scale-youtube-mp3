@@ -136,12 +136,17 @@
                 const statusData = await statusResponse.json();
 
                 if (statusData.status === "COMPLETED") {
-                    clearInterval(intervalId); // Detenemos el reloj
+                    clearInterval(intervalId);
                     spinner.style.display = "none";
-                    statusText.innerText = "¡Conversión exitosa!";
-                    // Mostramos el botón brillante de descarga
-                    resultContainer.innerHTML = `<a href="${statusData.download_url}" class="download-btn" download>⬇ Descargar Archivo MP3</a>`;
-                    convertBtn.disabled = false;
+                    statusText.innerText = "¡Conversión exitosa y almacenado en la nube S3!";
+                    
+                    // Pedimos la URL firmada de S3 a nuestra API
+                    fetch(`${API_URL}/download/${taskId}`)
+                        .then(res => res.json())
+                        .then(cloudData => {
+                            resultContainer.innerHTML = `<a href="${cloudData.download_url}" class="download-btn" target="_blank">⬇ Descargar desde Cloud S3</a>`;
+                            convertBtn.disabled = false;
+                        });
                 } else if (statusData.status === "FAILED") {
                     clearInterval(intervalId);
                     spinner.style.display = "none";

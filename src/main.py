@@ -7,8 +7,14 @@ import os
 from celery.result import AsyncResult
 from src.worker import celery_app, download_video_task
 import urllib.parse
+from src.aws_config import init_s3_bucket, BUCKET_NAME, get_s3_client # <--- AGREGA ESTA IMPORTACIÓN
 
 app = FastAPI(title="Cloud-Scale YouTube Converter - Fase 2")
+
+@app.on_event("startup")
+def startup_event():
+    # Esto corre automáticamente en cuanto Docker enciende el contenedor de la API
+    init_s3_bucket()
 
 app.add_middleware(
     CORSMiddleware,
@@ -74,22 +80,28 @@ def download_file(task_id: str):
     if task_result.status != "SUCCESS":
         raise HTTPException(status_code=400, detail="El archivo aún no está listo o la tarea falló.")
         
-    mp3_path = task_result.result.get("file_path")
+    s3_key = task_result.result.get("s3_key")
     file_name = task_result.result.get("file_name")
     
-    if os.path.exists(mp3_path):
-        # SOLUCCIÓN: Convertimos el nombre a un formato seguro para URLs (ej: %E2%99%AB)
-        # para que los caracteres como '♫' no rompan las cabeceras HTTP
-        encoded_filename = urllib.parse.quote(file_name)
+    s3 = get_s3_client()
+    
+    try:
+        # Generamos una URL firmada y directa de S3 para descargar el archivo de forma segura
+        # Como estamos en LocalStack, esta URL apuntará al puerto 4566
+        download_url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': BUCKET_NAME, 'Key': s3_key},
+            ExpiresIn=3600 # La URL expira en 1 hora
+        )
         
-        # Usamos el estándar 'filename*=UTF-8''; esto le dice explícitamente 
-        # al navegador que decodifique el nombre usando UTF-8.
-        headers = {
-            'Content-Disposition': f"attachment; filename*=UTF-8''{encoded_filename}"
-        }
+        # Como LocalStack corre dentro de la red de Docker con el nombre 'localstack',
+        # para que tu navegador web (que está afuera de Docker) pueda descargarla, 
+        # reemplazamos el host interno por '127.0.0.1'
+        public_url = download_url.replace("http://localstack:4566", "http://127.0.0.1:4566")
         
-        return FileResponse(path=mp3_path, media_type="audio/mpeg", headers=headers)
-    else:
-        raise HTTPException(status_code=404, detail="El archivo físico no se encontró en el servidor.")
+        return {"download_url": public_url}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al conectar con la infraestructura Cloud: {str(e)}")
 
 app.mount("/", StaticFiles(directory="src/static", html=True), name="static")
