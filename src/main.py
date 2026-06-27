@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles  # <--- NUEVA
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 from celery.result import AsyncResult
@@ -8,12 +10,19 @@ import urllib.parse
 
 app = FastAPI(title="Cloud-Scale YouTube Converter - Fase 2")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+if not os.path.exists("src/static"):
+    os.makedirs("src/static")
+
 class VideoRequest(BaseModel):
     url: str
-
-@app.get("/")
-def read_root():
-    return {"message": "API Asíncrona Funcional. Usa /convert para enviar una tarea."}
 
 # 1. ENDPOINT PARA INICIAR LA DESCARGA
 @app.post("/convert")
@@ -83,3 +92,4 @@ def download_file(task_id: str):
     else:
         raise HTTPException(status_code=404, detail="El archivo físico no se encontró en el servidor.")
 
+app.mount("/", StaticFiles(directory="src/static", html=True), name="static")

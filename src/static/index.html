@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud-Scale YT to MP3</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121214;
+            color: #e1e1e6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #202024;
+            padding: 2.5rem;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 100%;
+            max-width: 450px;
+        }
+        h1 { color: #04d361; margin-bottom: 0.5rem; }
+        p { color: #a8a8b3; margin-bottom: 2rem; }
+        input[type="text"] {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #29292e;
+            border-radius: 5px;
+            background-color: #121214;
+            color: #fff;
+            font-size: 1rem;
+            box-sizing: border-box;
+            margin-bottom: 1rem;
+        }
+        input[type="text"]:focus { border-color: #04d361; outline: none; }
+        button {
+            width: 100%;
+            padding: 0.8rem;
+            background-color: #04d361;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #00b34d; }
+        button:disabled { background-color: #29292e; color: #7c7c8a; cursor: not-allowed; }
+        .status-container { margin-top: 1.5rem; display: none; }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #04d361;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .download-btn {
+            display: inline-block;
+            background-color: #8257e5;
+            color: white;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+        .download-btn:hover { background-color: #9466ff; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Cloud Converter ♫</h1>
+    <p>Pega un enlace de YouTube para convertirlo a MP3 al instante.</p>
+    
+    <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=...">
+    <button id="convertBtn" onclick="startConversion()">Convertir a MP3</button>
+
+    <div id="statusContainer" class="status-container">
+        <div id="spinner" class="spinner"></div>
+        <p id="statusText">Enviando petición...</p>
+        <div id="resultContainer"></div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "http://127.0.0.1:8000";
+
+    async function startConversion() {
+        const urlInput = document.getElementById("urlInput").value;
+        const convertBtn = document.getElementById("convertBtn");
+        const statusContainer = document.getElementById("statusContainer");
+        const statusText = document.getElementById("statusText");
+        const resultContainer = document.getElementById("resultContainer");
+        const spinner = document.getElementById("spinner");
+
+        if (!urlInput) {
+            alert("Por favor, pega un enlace válido.");
+            return;
+        }
+
+        // Bloqueamos la interfaz mientras procesa
+        convertBtn.disabled = true;
+        statusContainer.style.display = "block";
+        spinner.style.display = "block";
+        statusText.innerText = "Conectando con el servidor...";
+        resultContainer.innerHTML = "";
+
+        try {
+            // 1. Enviamos el link a la API
+            const response = await fetch(`${API_URL}/convert`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: urlInput })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) throw new Error(data.detail || "Error al iniciar tarea");
+
+            const taskId = data.task_id;
+            statusText.innerText = "Video en fila de espera. Descargando y convirtiendo audio...";
+
+            // 2. Iniciamos el Polling (preguntar cada 2 segundos)
+            const intervalId = setInterval(async () => {
+                const statusResponse = await fetch(`${API_URL}/tasks/${taskId}`);
+                const statusData = await statusResponse.json();
+
+                if (statusData.status === "COMPLETED") {
+                    clearInterval(intervalId); // Detenemos el reloj
+                    spinner.style.display = "none";
+                    statusText.innerText = "¡Conversión exitosa!";
+                    // Mostramos el botón brillante de descarga
+                    resultContainer.innerHTML = `<a href="${statusData.download_url}" class="download-btn" download>⬇ Descargar Archivo MP3</a>`;
+                    convertBtn.disabled = false;
+                } else if (statusData.status === "FAILED") {
+                    clearInterval(intervalId);
+                    spinner.style.display = "none";
+                    statusText.innerText = "❌ Hubo un error al procesar el video.";
+                    convertBtn.disabled = false;
+                }
+            }, 2000);
+
+        } catch (error) {
+            spinner.style.display = "none";
+            statusText.innerText = `❌ Error: ${error.message}`;
+            convertBtn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>
