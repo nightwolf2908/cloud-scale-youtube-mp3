@@ -1,3 +1,4 @@
+![CI/CD Pipeline](https://github.com/nightwolf2908/cloud-scale-youtube-mp3/actions/workflows/ci-cd.yml/badge.svg)
 # Cloud-Scale YouTube to MP3 Converter 🚀
 
 Sistema asíncrono y contenerizado de alto rendimiento para la extracción, conversión y almacenamiento en la nube de audio desde plataformas de video. Diseñado bajo una arquitectura agnóstica basada en microservicios, emulación Cloud local y evasión robusta de rate-limiting.
@@ -11,6 +12,16 @@ El ecosistema está fragmentado en componentes independientes coordinados a trav
 * **Redis (In-Memory Broker):** Message broker de baja latencia encargado de la sincronización de tareas y estados entre la API y los Workers.
 * **LocalStack (AWS S3 Emulation):** Infraestructura de almacenamiento Cloud Object Storage emulada localmente para garantizar un desarrollo agnóstico de costos.
 * **FFmpeg Integration:** Motor binario nativo optimizado dentro de Linux para la extracción y transcodificación de audio a formato estéreo a 192kbps de forma eficiente.
+
+## 🧼 Características Avanzadas de Ingeniería
+
+Resiliencia ante Bloqueos (Anti-Bot): El extractor de medios implementa técnicas de suplantación de clientes móviles (android/ios native extraction arguments) junto con rotación dinámica de headers HTTP para mitigar respuestas de tipo 403 Forbidden impuestas por los firewalls de streaming de video.
+
+Manejo Eficiente de Disco: El worker de Celery opera bajo una política de consumo cero persistente. Una vez que el archivo es convertido localmente, se transmite inmediatamente al almacenamiento S3 mediante boto3 y el archivo físico local se destruye instantáneamente para evitar el desbordamiento de almacenamiento en el contenedor.
+
+Descargas Seguras mediante URLs Firmadas: El endpoint de descarga no expone rutas estáticas de servidores internos; en su lugar, utiliza generate_presigned_url de AWS S3 para delegar al cliente final una llave de descarga con tiempo de expiración limitado (1 hora), emulando los estándares más estrictos de seguridad corporativa en la nube.
+
+Garantía de Integración Continua (CI/CD):Implementación de un pipeline automatizado nativo en GitHub Actions que ejecuta pruebas sintácticas estáticas en Python (`flake8`) y valida de forma estricta la compilación y empaquetado de la arquitectura multi-contenedor con `docker compose build` en cada integración.
 
 ## 🛠️ Stack Tecnológico
 
@@ -69,10 +80,3 @@ docker compose down -v
 # Limpiar carpetas residuales del sistema anfitrión si es necesario
 rm -rf downloads
 
-## 🧼 CCaracterísticas Avanzadas de Ingeniería
-
-Resiliencia ante Bloqueos (Anti-Bot): El extractor de medios implementa técnicas de suplantación de clientes móviles (android/ios native extraction arguments) junto con rotación dinámica de headers HTTP para mitigar respuestas de tipo 403 Forbidden impuestas por los firewalls de streaming de video.
-
-Manejo Eficiente de Disco: El worker de Celery opera bajo una política de consumo cero persistente. Una vez que el archivo es convertido localmente, se transmite inmediatamente al almacenamiento S3 mediante boto3 y el archivo físico local se destruye instantáneamente para evitar el desbordamiento de almacenamiento en el contenedor.
-
-Descargas Seguras mediante URLs Firmadas: El endpoint de descarga no expone rutas estáticas de servidores internos; en su lugar, utiliza generate_presigned_url de AWS S3 para delegar al cliente final una llave de descarga con tiempo de expiración limitado (1 hora), emulando los estándares más estrictos de seguridad corporativa en la nube.

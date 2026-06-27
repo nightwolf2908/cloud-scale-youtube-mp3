@@ -4,8 +4,16 @@ name: CI/CD Pipeline 🚀
 on:
   push:
     branches: [ main, master ]
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+      - 'LICENSE'
   pull_request:
     branches: [ main, master ]
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+      - 'LICENSE'
 
 jobs:
   build-and-test:
