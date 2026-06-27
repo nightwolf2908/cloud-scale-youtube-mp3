@@ -26,7 +26,8 @@ jobs:
     # 3. Instalar dependencias para revisar la sintaxis de Python
     - name: Instalar herramientas de calidad de código
       run: |
-        python -m pip upgrade pip
+        # CAMBIO: Agregamos 'install --upgrade' en lugar de solo 'upgrade'
+        python -m pip install --upgrade pip
         pip install flake8
 
     # 4. Analizar el código en busca de errores graves de sintaxis (Semicolons, indentación rota, etc.)
