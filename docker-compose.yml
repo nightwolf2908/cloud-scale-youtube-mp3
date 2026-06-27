@@ -40,6 +40,7 @@ services:
         condition: service_healthy # 🌟 CAMBIO: No arranques la API hasta que LocalStack esté sano
     volumes:
       - .:/app
+    
 
   # --- EL WORKER TAMBIÉN ESPERARÁ A QUE ESTÉ SANO ---
   worker:
