@@ -2,7 +2,8 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# 4. INSTALACIÓN DE FFMPEG (Con reintentos por si falla la red)
+RUN apt-get clean && apt-get update --fix-missing && apt-get install -y --no-install-recommends \
     ffmpeg \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

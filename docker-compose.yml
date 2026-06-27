@@ -1,5 +1,5 @@
 services:
-  # --- SERVICIO 1: BASE DE DATOS EN MEMORIA (REDIS) ---
+
   redis:
     image: redis:7-alpine
     container_name: yt_mp3_redis
@@ -12,7 +12,7 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=s3  # Solo nos interesa levantar el simulador de S3
+      - SERVICES=s3
       - AWS_DEFAULT_REGION=us-east-1
     volumes:
       - "localstack_data:/var/lib/localstack"
@@ -45,5 +45,6 @@ services:
     volumes:
       - .:/app
 
-volumnes:
+# Al mismo nivel que "services" arriba
+volumes:
   localstack_data:
