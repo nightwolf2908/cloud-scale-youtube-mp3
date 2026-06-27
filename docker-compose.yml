@@ -1,11 +1,11 @@
 services:
-
   redis:
     image: redis:7-alpine
     container_name: yt_mp3_redis
     ports:
       - "6379:6379"
 
+  # --- LOCALSTACK CON VERIFICACIÓN DE SALUD ---
   localstack:
     image: localstack/localstack:3.4
     container_name: yt_mp3_localstack
@@ -16,7 +16,14 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
     volumes:
       - "localstack_data:/var/lib/localstack"
+    # 🌟 NUEVO: Le preguntamos a LocalStack internamente si su servicio S3 ya está vivo
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4566/_localstack/health || exit 1"]
+      interval: 5s      # Pregunta cada 5 segundos
+      timeout: 5s       # Espera hasta 5 segundos por respuesta
+      retries: 6
 
+  # --- LA API ESPERARÁ A QUE LOCALSTACK ESTÉ 'HEALTHY' ---
   api:
     build: .
     container_name: yt_mp3_api
@@ -27,11 +34,14 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
-      - redis
-      - localstack
+      redis:
+        condition: service_started
+      localstack:
+        condition: service_healthy # 🌟 CAMBIO: No arranques la API hasta que LocalStack esté sano
     volumes:
       - .:/app
 
+  # --- EL WORKER TAMBIÉN ESPERARÁ A QUE ESTÉ SANO ---
   worker:
     build: .
     container_name: yt_mp3_worker
@@ -40,11 +50,12 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     command: celery -A src.worker.celery_app worker --loglevel=info
     depends_on:
-      - redis
-      - localstack
+      redis:
+        condition: service_started
+      localstack:
+        condition: service_healthy # 🌟 CAMBIO
     volumes:
       - .:/app
 
-# Al mismo nivel que "services" arriba
 volumes:
   localstack_data:

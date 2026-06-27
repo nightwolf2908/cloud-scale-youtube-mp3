@@ -1,6 +1,9 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV PYTHONIOENCODING=utf-8
 WORKDIR /app
 # 4. INSTALACIÓN DE FFMPEG (Con reintentos por si falla la red)
 RUN apt-get clean && apt-get update --fix-missing && apt-get install -y --no-install-recommends \
