@@ -1,0 +1,42 @@
+name: CI/CD Pipeline 🚀
+
+# El flujo se disparará automáticamente con cada 'push' o 'pull request' a la rama main
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    # Usamos la última versión estable de Ubuntu disponible en los servidores de GitHub
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Copiar el código del repositorio dentro de la máquina virtual de GitHub
+    - name: Checkout del código
+      uses: actions/checkout@v4
+
+    # 2. Configurar el entorno de Python de forma aislada
+    - name: Configurar Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-style: '3.12'
+
+    # 3. Instalar dependencias para revisar la sintaxis de Python
+    - name: Instalar herramientas de calidad de código
+      run: |
+        python -m pip upgrade pip
+        pip install flake8
+
+    # 4. Analizar el código en busca de errores graves de sintaxis (Semicolons, indentación rota, etc.)
+    - name: Analizar sintaxis con Flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+    # 5. La verdadera prueba de fuego: Verificar que Docker Compose compile perfectamente
+    - name: Validar compilación de Docker Compose
+      run: |
+        # Simula el build completo de tus 4 contenedores para asegurar que requirements.txt no esté roto
+        docker compose build
